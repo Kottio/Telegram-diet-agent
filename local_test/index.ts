@@ -17,23 +17,23 @@ if (!token) throw new Error("Telegram bot token not found!");
 //   console.log(`✅: @${body.result.username}`);
 // }
 
-const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates`);
-const data = GetUpdates.parse(await res.json());
+// const res = await fetch(`https://api.telegram.org/bot${token}/getUpdates`);
+// const data = GetUpdates.parse(await res.json());
 
-if (!data.ok) {
-  console.error("Telegram refused our Token API call");
-}
+// if (!data.ok) {
+//   console.error("Telegram refused our Token API call");
+// }
 
-const messages = data.result.map((x) => x.message?.text);
-console.log(messages);
+// const messages = data.result.map((x) => x.message?.text);
+// console.log(messages);
 
-// const chat_id = 8869193928;
-// const response = await fetch(
-//   `https://api.telegram.org/bot${token}/sendMessage`,
-//   {
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify({ chat_id, text: "Hey there this is a test" }),
-//   },
-// );
-// console.log(response);
+const chat_id = 8869193928;
+const response = await fetch(
+  `https://api.telegram.org/bot${token}/sendMessage`,
+  {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id, text: "Salut les vieux" }),
+  },
+);
+console.log(response);

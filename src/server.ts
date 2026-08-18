@@ -1,3 +1,5 @@
+import { clean_raw_message } from "./pipeline";
+
 const port = Number(process.env.PORT ?? 3000);
 
 Bun.serve({
@@ -15,7 +17,9 @@ Bun.serve({
         return new Response("unauthorized", { status: 401 });
       }
       const update = await req.json();
-      console.log(JSON.stringify(update, null, 2));
+
+      clean_raw_message(update);
+
       return new Response("ok");
     }
 
