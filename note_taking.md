@@ -72,7 +72,7 @@ Then all text sent to the bot, are linked ot the webhook and it triggers on the 
 openssl rand -hex 32 → new TELEGRAM_WEBHOOK_SECRET → update .env
 bun run scratch/set-webhook.ts <tunnel-url>
 
-### Formatting to write in the database.
+### Formatting & write in the database.
 
 Thinking of hexagonal architecture, following the principle of separation of concerns
 
@@ -95,3 +95,50 @@ Then a line that insert into table, turn this into function and add it to the pi
 First run `bun run db/sqlite.ts`
 Then add it to the pipeline.ts.
 `sqlite3 scratch/data/dev.sqlite` -> Works!
+
+- Finish sqlite3 Testing.
+- Set up Local postgres + pipeline writing to it.
+- connect duckdb to it - OLAP.
+
+### Creating postgres docker compose
+
+wrote the comnpose.yml for the docker container to host local postgres db
+
+```bash
+docker compose up -d
+docker compose exec postgres psql -U pao -d diet_agent
+```
+
+Create a throw_away table then `docker compose down` and restart to ensure volume well configured: - Silent problem
+
+To run the intial migration and creation of table the best way is to have local files and run them via
+
+```bash
+docker compose exec -T postgres psql -U diet -d diet_agent < migrations/001_init.sql
+```
+
+`migrate.ts` is Not being a migration but the actual bootstrap.
+
+In the migrate.ts we connect to db via import {sql} from bun which implicitely read the string in the .env. 
+
+It create the migration table and look at the current sql file in migratons/ 
+It only applies those that havent been applied in the db yet. 
+
+
+```json
+ "scripts": {
+    "dev": "bun --watch run src/server.ts",
+    "migrate": "bun src/scripts/migrate.ts"
+  },
+```
+
+Then when create the first file 
+`bun run migrate`
+
+```bash
+➜  diet_agent git:(main) ✗ bun run migrate
+$ bun src/scripts/migrate.ts
++ 001_create_raw_event.sql
+migrations up to date
+```
+

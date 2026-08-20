@@ -1,6 +1,11 @@
 {
   "name": "diet_agent",
   "private": true,
+  "scripts": {
+    "dev": "bun --watch run src/server.ts",
+    "migrate": "bun src/scripts/migrate.ts",
+    "db": "docker compose exec postgres sh -c 'psql -U $POSTGRES_USER -d $POSTGRES_DB'"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },

@@ -13,6 +13,8 @@ db.run(`
     unique (source, update_id))
   `);
 
+
+  
 const stmt = db.query(`
   insert or ignore into raw_event (update_id, chat_id, raw_text)
   values ($updateId, $chatId, $rawText)
