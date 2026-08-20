@@ -1,4 +1,4 @@
-import { clean_raw_message } from "./pipeline";
+import { handleUpdate } from "./pipeline";
 
 const port = Number(process.env.PORT ?? 3000);
 
@@ -18,7 +18,7 @@ Bun.serve({
       }
       const update = await req.json();
 
-      clean_raw_message(update);
+      const id = await handleUpdate(update);
 
       return new Response("ok");
     }

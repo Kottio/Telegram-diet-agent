@@ -1,37 +1,25 @@
-interface message_raw_props {
-  update_id: number;
-  message: {
-    message_id: number;
-    from: {
-      id: number;
-      is_bot: Boolean;
-      first_name: string;
-      language_code: String;
-    };
-    chat: {
-      id: number;
-      first_name: string;
-      type: string;
-    };
-    date: number;
-    text: string;
-  };
-}
+import { insertRawEvent } from "./db";
 
-import { insertRawMessage } from "../scratch/db/sqlite";
+export async function handleUpdate(update: any): Promise<number | null> {
+  const msg = update?.message;
+  if (!msg) return null; // edits, joins, channel posts
 
-export function clean_raw_message(raw_message: message_raw_props) {
-  const updateId = raw_message.update_id;
-  const rawText = raw_message.message.text;
-  const chatId = raw_message.message.chat.id;
-  const receivedAt = raw_message.message.date;
-  console.log(
-    "Loading the following in the sql Lite",
-    updateId,
-    chatId,
-    rawText,
+  const rawText: string | null = msg.text ?? msg.caption ?? null;
+  const receivedAt = new Date(msg.date * 1000); // Telegram sends seconds
+
+  const id = await insertRawEvent({
+    updateId: update.update_id,
+    chatId: msg.chat.id,
     receivedAt,
-  );
+    rawText,
+    payload: update, // keep everything
+  });
 
-  insertRawMessage(updateId, chatId, rawText);
+  if (id === null) {
+    console.log(`↺ update ${update.update_id} already stored`);
+    return null;
+  }
+
+  console.log(`✓ raw_event ${id}: ${rawText}`);
+  return id;
 }

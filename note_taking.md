@@ -119,11 +119,10 @@ docker compose exec -T postgres psql -U diet -d diet_agent < migrations/001_init
 
 `migrate.ts` is Not being a migration but the actual bootstrap.
 
-In the migrate.ts we connect to db via import {sql} from bun which implicitely read the string in the .env. 
+In the migrate.ts we connect to db via import {sql} from bun which implicitely read the string in the .env.
 
-It create the migration table and look at the current sql file in migratons/ 
-It only applies those that havent been applied in the db yet. 
-
+It create the migration table and look at the current sql file in migratons/
+It only applies those that havent been applied in the db yet.
 
 ```json
  "scripts": {
@@ -132,7 +131,7 @@ It only applies those that havent been applied in the db yet.
   },
 ```
 
-Then when create the first file 
+Then when create the first file
 `bun run migrate`
 
 ```bash
@@ -142,3 +141,6 @@ $ bun src/scripts/migrate.ts
 migrations up to date
 ```
 
+### Writring in the postgres.
+
+Create the db file which SQL insert payload in the table. Called by the pipeline.ts when server is triggered by payload.
