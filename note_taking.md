@@ -153,6 +153,18 @@ Now Handling of messaging Transfromation?
 
 Reframing the project as telegram Pipepline to DB that is repoduciable and adaptable to any schemma and Use Case!
 
+### Parsing text with AI & Writing in the database.
 
-### Parsing text with AI
-Reading the text, extraacting the information and parsing it into specific format with force tool using zod json schema. 
+Reading the text, extraacting the information and parsing it into specific format with force tool using zod json schema.
+Created two meal and meal_items tabels in migration 002.
+Enforced the AI parsing via Zod schema as a tool.
+the parsing is quick and saved in the database for both meal and mealItems.
+
+### Write back
+
+Started write back with simple non-read db response using direct AI return to responsd to message.
+-> Need to write on Quick summary of daily objective now
+This involves have user table with profile -> kg, size etc.. & Daily objective and weekly objective.
+This will later evolved thanks to Added Training part.
+
+\\ Need to work on Format and parsed type consitency.
