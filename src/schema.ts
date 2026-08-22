@@ -31,3 +31,18 @@ export type NewRawEvent = {
   rawText: string | null;
   payload: unknown;
 };
+
+export const MealItem = z.object({
+  name: z.string().min(1),
+  quantity: z.number().positive().nullable(),
+  unit: z.string().min(1).nullable(),
+  grams: z.number().positive().max(5000).nullable(),
+  kcal: z.number().nonnegative().max(5000).nullable(),
+  protein_g: z.number().nonnegative().max(500).nullable(),
+  carbs_g: z.number().nonnegative().max(1000).nullable(),
+  fat_g: z.number().nonnegative().max(500).nullable(),
+  confidence: z.enum(["low", "medium", "high"]),
+});
+
+export const Meal = z.object({ items: z.array(MealItem).min(1).max(30) });
+export type Meal = z.infer<typeof Meal>;

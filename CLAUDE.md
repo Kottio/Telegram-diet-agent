@@ -1,106 +1,137 @@
+# CLAUDE.md
 
-Default to using Bun instead of Node.js.
+## What this repo is
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Use `bunx <package> <command>` instead of `npx <package> <command>`
-- Bun automatically loads .env, so don't use dotenv.
+A **skeleton for conversational data capture**: messages sent to a chat bot become
+validated, structured rows in Postgres, with dbt marts and an Evidence dashboard on
+top. The current instance captures meals. **The domain is meant to be swapped.**
 
-## APIs
+Read `README.md` to run it. `note_taking.md` is the build journal.
 
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
+## The domain lives in exactly three places
 
-## Testing
+1. **the prompt** — what the model is asked to extract
+2. **the Zod schema** — the contract it must satisfy (the model's tool schema is
+   *derived* from this, never written twice)
+3. **the migration** — the target tables
 
-Use `bun test` to run tests.
+Everything else is domain-agnostic infrastructure. If adapting the domain requires
+touching a fourth file, that's a design smell — say so rather than quietly working
+around it.
 
-```ts#index.test.ts
-import { test, expect } from "bun:test";
+---
 
-test("hello world", () => {
-  expect(1).toBe(1);
-});
+## Invariants — do not break these
+
+These are the point of the project. A change that violates one is wrong even if it
+works and even if the user asks for it; push back and explain.
+
+1. **`raw_event` is append-only.** Never `update`, never `delete`. Everything
+   downstream is derived, which is what makes any later change a *backfill* rather
+   than a restart.
+2. **Store the full payload as `jsonb`.** Extracted columns are convenience. Promote a
+   field from the payload to a column only when you need to query or index it.
+3. **Model output is untrusted input.** It passes Zod validation or it goes to
+   `quarantine` — stored, never dropped, never crashed on. Nothing unvalidated reaches
+   a typed table.
+4. **Idempotency:** `unique (source, update_id)`. Chat platforms retry deliveries; this
+   constraint is what makes that harmless. Never remove it.
+5. **Answer the webhook before doing slow work.** Store raw, return 200, then process.
+   Never `await` an AI call before responding.
+6. **Corrections are events, not updates.** Never overwrite the model's original guess
+   — that data is what proves the system improved.
+7. **Every derived row carries provenance:** model id, prompt version, parser version.
+   Without it, history can't be re-run or explained.
+8. **Migrations are append-only.** Never edit an applied file; add a new one.
+9. **No LLM in the write path's control flow.** Same input must produce the same rows,
+   forever. Agents are for open-ended *reads* only.
+10. **Secrets live in `.env`**, never in committed files, never printed to logs.
+
+## Architecture
+
+```
+src/server.ts      transport — HTTP only: verify secret, allowlist chat, hand off, respond
+src/pipeline.ts    use case  — the sequence. No HTTP, no SQL.
+src/db/            repository — SQL only. No decisions.
+src/telegram.ts    adapter
+src/ai/            adapter
+src/schema.ts      the contract
+migrations/*.sql   schema, applied by src/scripts/migrate.ts
 ```
 
-## Frontend
+Dependency rule: outer imports inner, never the reverse. `pipeline.ts` must not know
+HTTP exists.
 
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
+**The test for "where does this code go?":** *could a cron job call this with no HTTP?*
+Not hypothetical — the retry script and the backfill both need exactly that.
 
-Server:
+---
 
-```ts#index.ts
-import index from "./index.html"
+## Adapting this template to a new domain
 
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
-```
+When asked to adapt this repo, **interview first, generate second.** Do not guess the
+schema from a one-line description.
 
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
+### Ask these six questions
 
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
+1. What are you capturing, in one sentence?
+2. **What is one record?** (the grain — non-experts usually get this wrong; probe it)
+3. Which fields must always be present, and which are optional?
+4. **Give me three real messages you would actually send.**
+5. What three numbers or charts do you want at the end?
+6. What would make a record obviously wrong?
 
-With the following `frontend.tsx`:
+### What each answer produces
 
-```tsx#frontend.tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
+| answer | produces |
+|---|---|
+| 1–2 | table names and the grain |
+| 3 | required vs nullable columns, Zod optionality |
+| 4 | few-shot examples in the prompt **and** test fixtures |
+| 5 | dbt marts and Evidence pages |
+| 6 | dbt tests: accepted ranges, `not_null`, uniqueness |
 
-// import .css files directly and it works
-import './index.css';
+Question 4 is doing double duty deliberately — real user phrasing is both the best
+prompt material and the only honest test data.
 
-const root = createRoot(document.body);
+### Then generate, in this order
 
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
+1. migration for the new tables (new numbered file — never edit an applied one)
+2. Zod schema
+3. tool/JSON schema **derived from** the Zod schema
+4. prompt, with the user's three real messages as examples
+5. starter dbt models and tests
+6. starter Evidence pages
 
-root.render(<Frontend />);
-```
+### Acceptance check — run it before claiming success
 
-Then, run index.ts
+- `bun run migrate` applies cleanly, and applies again as a no-op
+- a sample message from question 4 produces a valid row end to end
+- a deliberately malformed model output lands in `quarantine`, no crash
+- a duplicate delivery inserts nothing
+- `dbt build` passes, including the tests from question 6
+- the dashboard builds
 
-```sh
-bun --hot ./index.ts
-```
+Generation without verification is the failure mode here. If the checks can't run, the
+work isn't finished.
 
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+---
+
+## Stack conventions
+
+- **Bun**, not Node. `bun <file>`, `bun add`, `bun test`. `.env` is loaded
+  automatically — do not add `dotenv`.
+- **`Bun.serve`**, no Express, no Hono. Two routes; conditions are enough.
+- **`Bun.sql`** for Postgres, no ORM. Plain SQL in `.sql` files — the schema is the
+  content for this audience.
+- **Tagged templates vs raw SQL:** `` sql`select ...` `` is fine (static text is SQL);
+  `` sql`${fileContents}` `` is not (a `${}` slot is a *parameter*). Raw SQL needs
+  `.unsafe()`.
+- **Close connections** in scripts, or the process hangs.
+- **Ops commands** live in `package.json` scripts, not in shell history.
+- Keep the dependency list tiny. It's part of the point.
+
+## When unsure
+
+Ask. This repo's value is in its constraints, and a plausible-looking shortcut that
+breaks one of the invariants above is worse than no change at all.

@@ -1,5 +1,5 @@
 import { SQL } from "bun";
-import type { NewRawEvent } from "./schema";
+import type { NewRawEvent, Meal } from "../schema";
 
 if (!process.env.DATABASE_URL)
   throw new Error("DATABASE_URL missing from .env");

@@ -144,3 +144,15 @@ migrations up to date
 ### Writring in the postgres.
 
 Create the db file which SQL insert payload in the table. Called by the pipeline.ts when server is triggered by payload.
+
+- all Works, Telegram triggers webhook and write in the postgres raw_event.
+
+Now Handling of messaging Transfromation?
+
+# Strategic Direction
+
+Reframing the project as telegram Pipepline to DB that is repoduciable and adaptable to any schemma and Use Case!
+
+
+### Parsing text with AI
+Reading the text, extraacting the information and parsing it into specific format with force tool using zod json schema. 
